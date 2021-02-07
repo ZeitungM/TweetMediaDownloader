@@ -4,8 +4,8 @@
 画像が複数枚添付されていたときは全てダウンロードします。
 
 # 使い方
-1 Twitter の開発者アカウントを作る。
-1 環境変数 TWITTER_BEARER_TOKEN に自分の Bearer token をセットする。
-1 環境変数 TWITTER_URL_FILE にツイートの URL を記述するファイル名を指定する。
-1 TWITTER_URL_FILE で指定したファイルにダウンロードしたいメディアが添付されているツイートのURLを記述する(改行区切りで複数一括ダウンロード可)
-1 実行する
+1. Twitter の開発者アカウントを作る。
+1. 環境変数 TWITTER_BEARER_TOKEN に自分の Bearer token をセットする。
+1. 環境変数 TWITTER_URL_FILE にツイートの URL を記述するファイル名を指定する。
+1. TWITTER_URL_FILE で指定したファイルにダウンロードしたいメディアが添付されているツイートのURLを記述する(改行区切りで複数一括ダウンロード可)
+1. 実行する
