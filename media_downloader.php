@@ -1,6 +1,6 @@
 <?php
 
-    function DownloadImageFromTweetId( $tweet_id, $curl)
+    function DownloadImageFromTweetId( $tweet_id, $selected_images, $curl)
     {
         // curl に URL を設定する
         $tweet_id = str_replace( PHP_EOL, '', $tweet_id );
@@ -20,15 +20,18 @@
             {
               foreach($image_url = $json_array['extended_entities']['media'] as $photo_i )
               {
-                  // 画像の URL と拡張子を取得し、画像のファイル名を作る
-                  $image_url = $photo_i['media_url_https'];
-                  $image_extension = strtolower( pathinfo($image_url)['extension']);
-                  $image_name = $json_array['user']['screen_name'].".".$json_array['id'].".".$i.".".$image_extension;
-                  echo "Start to save Image: ", $image_name ,"\n";
+                  if( empty($selected_images) || in_array( $i, $selected_images ) )
+                  {
+                    // 画像の URL と拡張子を取得し、画像のファイル名を作る
+                    $image_url = $photo_i['media_url_https'];
+                    $image_extension = strtolower( pathinfo($image_url)['extension']);
+                    $image_name = $json_array['user']['screen_name'].".".$json_array['id'].".".$i.".".$image_extension;
+                    echo "Start to save Image: ", $image_name ,"\n";
 
-                  $image_data = file_get_contents($image_url."?name=orig");
-                  file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_name, $image_data);
-                  echo "Photo Saved: ".$image_name."\n";
+                    $image_data = file_get_contents($image_url."?name=orig");
+                    file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_name, $image_data);
+                    echo "Photo Saved: ".$image_name."\n";
+                  }
 
                   $i++;
               }
@@ -83,6 +86,7 @@
     $file_handle = fopen( $file_path, 'r' );
 
     $tweet_ids = [];
+    $selected_images = [];
     while( $tweet_url = fgets($file_handle) )
     {
         // ツイートのURLは以下の形式で与えられるので、 /status/ から最後までか、 ?までを抜き出す
@@ -91,6 +95,9 @@
         //https://twitter.com/i/web/status/1354498563091390464
         preg_match('/(?<=\/status\/)\d+/', $tweet_url, $match);
         $tweet_ids[] = utf8_encode($match[0]);
+
+        preg_match_all('/(?<=,)\d+/', $tweet_url, $match);
+        $selected_images[] = array_map( 'utf8_encode', $match[0]);
     }
 
     // curl の設定
@@ -106,9 +113,13 @@
 
 
     echo "Read ".count($tweet_ids). " tweets"."\n";
+
+    // TODO: 全てのツイートのURLを読み込んでから各URLについてメディア保存したら汚くなった。"1行読んで保存"の形式に直したい
+    $i = 0;
     foreach( $tweet_ids as $tweet_id_i )
     {
-        DownloadImageFromTweetId( $tweet_id_i, $curl);
+        DownloadImageFromTweetId( $tweet_id_i, $selected_images[$i], $curl);
+        $i++;
     }
 
     curl_close($curl);
