@@ -12,6 +12,11 @@
         $curl_result_utf8 = utf8_encode($curl_result);
         $json_array = json_decode( $curl_result_utf8, true );
 
+        if(!isset($json_array['extended_entities']['media']))
+        {
+            echo "Unsupported JSON Type\n";
+        }
+
         // 添付メディアが画像の場合
         if($json_array['extended_entities']['media']['0']['type']==='photo')
         {
