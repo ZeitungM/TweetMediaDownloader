@@ -73,6 +73,7 @@
             $movie_info = pathinfo($movie_url);
             $movie_extension = "mp4";
             $movie_name = $json_array['user']['screen_name'].".".$json_array['id'].".".$movie_extension;
+            echo "Start to save Movie: ", $movie_name ,"\n";
 
             $movie_data = file_get_contents($movie_url);
             file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$movie_name, $movie_data);
@@ -85,21 +86,6 @@
     $file_path = getenv('TWITTER_URL_FILE');
     $file_handle = fopen( $file_path, 'r' );
 
-    $tweet_ids = [];
-    $selected_images = [];
-    while( $tweet_url = fgets($file_handle) )
-    {
-        // ツイートのURLは以下の形式で与えられるので、 /status/ から最後までか、 ?までを抜き出す
-        //https://twitter.com/mt_fujimaru/status/1352192965704204291?s=19
-        //https://twitter.com/warecommon/status/1354746039492878336
-        //https://twitter.com/i/web/status/1354498563091390464
-        preg_match('/(?<=\/status\/)\d+/', $tweet_url, $match);
-        $tweet_ids[] = utf8_encode($match[0]);
-
-        preg_match_all('/(?<=,)\d+/', $tweet_url, $match);
-        $selected_images[] = array_map( 'utf8_encode', $match[0]);
-    }
-
     // curl の設定
     $endpoint = 'https://api.twitter.com/1.1/statuses/show.json?id=';
 
@@ -111,15 +97,27 @@
     curl_setopt( $curl, CURLOPT_HTTPHEADER, $header );
     curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
 
-
-    echo "Read ".count($tweet_ids). " tweets"."\n";
-
-    // TODO: 全てのツイートのURLを読み込んでから各URLについてメディア保存したら汚くなった。"1行読んで保存"の形式に直したい
+    $tweet_ids = [];
+    $selected_images = [];
     $i = 0;
-    foreach( $tweet_ids as $tweet_id_i )
+    while( $tweet_url = fgets($file_handle) )
     {
-        DownloadImageFromTweetId( $tweet_id_i, $selected_images[$i], $curl);
+        // ツイートのURLは以下の形式で与えられるので、 /status/ から最後までか、 ?までを抜き出す
+        //https://twitter.com/mt_fujimaru/status/1352192965704204291?s=19
+        //https://twitter.com/warecommon/status/1354746039492878336
+        //https://twitter.com/i/web/status/1354498563091390464
+
+        preg_match('/(?<=\/status\/)\d+/', $tweet_url, $match);
+        $tweet_id = utf8_encode($match[0]);
+
+        preg_match_all('/(?<=,)\d+/', $tweet_url, $match);
+        $selected_images = array_map( 'utf8_encode', $match[0]);
+
         $i++;
+        // これから処理する URL を "読み込んだURLの番号: URL" の形式で表示
+        echo $i, ": ", str_replace( array("\r\n", "\r", "\n"), '', $tweet_url), "\n";
+
+        DownloadImageFromTweetId( $tweet_id, $selected_images, $curl);
     }
 
     curl_close($curl);
