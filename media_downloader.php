@@ -14,7 +14,7 @@
 
         if(!isset($json_array['extended_entities']['media']))
         {
-            echo "Unsupported JSON Type\n";
+            echo "Unsupported JSON Type. json['extended_entities']['media'] is not exist.\n";
         }
 
         // 添付メディアが画像の場合
@@ -79,6 +79,19 @@
             $movie_extension = "mp4";
             $movie_name = $json_array['user']['screen_name'].".".$json_array['id'].".".$movie_extension;
             echo "Start to save Movie: ", $movie_name ,"\n";
+
+            $movie_data = file_get_contents($movie_url);
+            file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$movie_name, $movie_data);
+            echo "Movie Saved: ".$movie_name."\n";
+        }
+        // gif アニメのとき
+        elseif($json_array['extended_entities']['media']['0']['type']==='animated_gif')
+        {
+            $movie_url = $json_array['extended_entities']['media']['0']['video_info']['variants'][0]['url'];
+            $movie_info = pathinfo($movie_url);
+            $movie_extension = "mp4";
+            $movie_name = $json_array['user']['screen_name'].".".$json_array['id'].".".$movie_extension;
+            echo "Start to save animated gif: ", $movie_name ,"\n";
 
             $movie_data = file_get_contents($movie_url);
             file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$movie_name, $movie_data);
