@@ -12,6 +12,12 @@
         $curl_result_utf8 = utf8_encode($curl_result);
         $json_array = json_decode( $curl_result_utf8, true );
 
+        if(isset($json_array['errors']))
+        {
+            echo "Error(".$json_array['errors'][0][code].") ".$json_array['errors'][0][message];
+            return;
+        }
+
         if(!isset($json_array['extended_entities']['media']))
         {
             echo "Unsupported JSON Type. json['extended_entities']['media'] is not exist.\n";
