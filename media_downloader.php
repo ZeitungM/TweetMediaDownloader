@@ -3,6 +3,8 @@
   class Tweet
   {
     public static $_curl;
+    public static $_curl_header;
+
     public static $_endpoint_get2tweet = 'https://api.twitter.com/2/tweets';
     public static $_query_tweet_id = '?ids=';
     public static $_queryname_expansions = '&expansions=';
@@ -20,7 +22,11 @@
 
     function __construct()
     {
-
+        self::$_curl = curl_init();
+        curl_setopt( self::$_curl, CURLOPT_CUSTOMREQUEST, 'GET' );
+        self::$_curl_header  = array("Authorization: Bearer ".getenv('TWITTER_BEARER_TOKEN'));
+        curl_setopt( self::$_curl, CURLOPT_HTTPHEADER, self::$_curl_header );
+        curl_setopt( self::$_curl, CURLOPT_RETURNTRANSFER, true );
     }
 
     function GetTweetIdByRegEx($line)
@@ -43,19 +49,14 @@
     function GetUsernameByAPI()
     {
       // ユーザ情報を取得する API : curl "https://api.twitter.com/2/tweets?ids=<tweet_id>&expansions=author_id&tweet.fields=created_at&user.fields=username"  -H "Authorization: Bearer AAAAAAAAAAAAAAAAAAAAABEoMAEAAAAACwO9DW%2F291bM4Cf3G59bUsySSLE%3DBPvqyMMrVoQ5iy1bqsK27dMdRXh8WboAsyBsfgP8pfBqa5RiJX"
-      // curl の設定
-      $curl = curl_init();
-      curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, 'GET' );
-      $header = array("Authorization: Bearer ".getenv('TWITTER_BEARER_TOKEN'));
-      curl_setopt( $curl, CURLOPT_HTTPHEADER, $header );
-      curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
 
       // user.fieldの username の取得には、expansionsの指定も必要
       //$_endpoint_get2tweet =
       //           'https://api.twitter.com/2/tweets';
+      // ツイートの URL を curl に設定
       $api_url = self::$_endpoint_get2tweet.self::$_query_tweet_id.$this->_id.self::$_queryname_expansions.self::$_querytype_author_id.'&'.self::$_query_user_fields;
-      curl_setopt( $curl, CURLOPT_URL, $api_url);
-      $curl_result = curl_exec($curl);
+      curl_setopt( self::$_curl, CURLOPT_URL, $api_url);
+      $curl_result = curl_exec(self::$_curl);
       $curl_result_utf8 = utf8_encode($curl_result);
       $json_array = json_decode( $curl_result_utf8, true );
 
@@ -66,19 +67,13 @@
     function DownloadImage()
     {
       // curl に URL を設定する
-      $curl = curl_init();
-      curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, 'GET' );
-      $header = array("Authorization: Bearer ".getenv('TWITTER_BEARER_TOKEN'));
-      curl_setopt( $curl, CURLOPT_HTTPHEADER, $header );
-      curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-
       $tweet_id = str_replace( PHP_EOL, '', $this->_id );
       //$_query_media_fields = '&expansions=attachments.media_keys&media.fields=url';
       $get_image_url = self::$_endpoint_get2tweet.self::$_query_tweet_id.$this->_id.self::$_queryname_expansions.self::$_querytype_attachments_media_keys.'&'.self::$_queryname_media_fields.self::$_querytype_url;
-      curl_setopt( $curl, CURLOPT_URL, $get_image_url);
+      curl_setopt( self::$_curl, CURLOPT_URL, $get_image_url);
 
       // curl を実行し、 JSON 形式に変換
-      $curl_result = curl_exec($curl);
+      $curl_result = curl_exec(self::$_curl);
       $curl_result_utf8 = utf8_encode($curl_result);
       $json_array = json_decode( $curl_result_utf8, true );
       //$this->PrintApiResult($json_array);
@@ -267,17 +262,6 @@
     $file_path = getenv('TWITTER_URL_FILE');
     $file_handle = fopen( $file_path, 'r' );
 
-    // curl の設定
-    $endpoint = 'https://api.twitter.com/1.1/statuses/show.json?id=';
-
-    $curl = curl_init();
-    curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, 'GET' );
-
-    $header = array("Authorization: Bearer ".getenv('TWITTER_BEARER_TOKEN'));
-
-    curl_setopt( $curl, CURLOPT_HTTPHEADER, $header );
-    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-
     $screen_name;
     $tweets = [];
     $tweet_ids = [];
@@ -310,6 +294,6 @@
         //DownloadImageFromTweetId( $tweet_id, $screen_name, $selected_images, $curl);
     }
 
-    curl_close($curl);
+    //curl_close($_curl); // todo: static 化した curl の curl_close をどうするか
     fclose($file_handle);
 ?>
