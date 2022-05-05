@@ -4,6 +4,16 @@
   {
     public static $_curl;
     public static $_endpoint_get2tweet = 'https://api.twitter.com/2/tweets';
+    public static $_query_tweet_id = '?ids=';
+    public static $_queryname_expansions = '&expansions=';
+    public static $_querytype_author_id = 'author_id';
+    public static $_query_user_fields = 'user.fields=username';
+
+    public static $_query_media_fields = '&expansions=attachments.media_keys&media.fields=url';
+    public static $_querytype_attachments_media_keys = 'attachments.media_keys';
+    public static $_queryname_media_fields = 'media.fields=';
+    public static $_querytype_url = 'url';
+
     public $_id;
     public $_author;
     public $_selected_images;
@@ -22,16 +32,12 @@
 
       preg_match('/(?<=\/status\/)\d+/', $line, $match);
       $this->_id = utf8_encode($match[0]);
-      //echo "tweet id: ".$this->_id."\n";
     }
 
     function GetSelectedImagesByRegEx($line)
     {
       preg_match_all('/(?<=,)\d+/', $line, $match);
       $this->_selected_images = array_map( 'utf8_encode', $match[0]);
-//      echo "selected images: ";
-//      var_dump($this->_selected_images);
-//      echo "\n";
     }
 
     function GetUsernameByAPI()
@@ -44,15 +50,10 @@
       curl_setopt( $curl, CURLOPT_HTTPHEADER, $header );
       curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
 
-      //$endpoint = 'https://api.twitter.com/2/tweets';
-      $query_tweet_id = "?ids=";
-      $query_expansions = "&expansions=author_id";
-      $query_user_fields = "&user.fields=username";
-      $tweet_id = str_replace( PHP_EOL, '', $tweet_id );
-
       // user.fieldの username の取得には、expansionsの指定も必要
-
-      $api_url = 'https://api.twitter.com/2/tweets'.$query_tweet_id.$this->_id.$query_expansions.$query_user_fields;
+      //$_endpoint_get2tweet =
+      //           'https://api.twitter.com/2/tweets';
+      $api_url = self::$_endpoint_get2tweet.self::$_query_tweet_id.$this->_id.self::$_queryname_expansions.self::$_querytype_author_id.'&'.self::$_query_user_fields;
       curl_setopt( $curl, CURLOPT_URL, $api_url);
       $curl_result = curl_exec($curl);
       $curl_result_utf8 = utf8_encode($curl_result);
@@ -72,9 +73,9 @@
       curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
 
       $tweet_id = str_replace( PHP_EOL, '', $this->_id );
-      echo "tweet_url: ".$tweet_url."\n";
-      $tweet_url = 'https://api.twitter.com/2/tweets?ids='.$tweet_id.'&expansions=attachments.media_keys&media.fields=url';
-      curl_setopt( $curl, CURLOPT_URL, $tweet_url);
+      //$_query_media_fields = '&expansions=attachments.media_keys&media.fields=url';
+      $get_image_url = self::$_endpoint_get2tweet.self::$_query_tweet_id.$this->_id.self::$_queryname_expansions.self::$_querytype_attachments_media_keys.'&'.self::$_queryname_media_fields.self::$_querytype_url;
+      curl_setopt( $curl, CURLOPT_URL, $get_image_url);
 
       // curl を実行し、 JSON 形式に変換
       $curl_result = curl_exec($curl);
@@ -84,21 +85,43 @@
 
       // 画像の URL と拡張子を取得し、画像のファイル名を作る
       // 画像が複数添付されている場合、['includes']['media'][N]['url'] のNをループすればOK
-      $image_url = $json_array['includes']['media']['0']['url'];
-      $image_extension = strtolower( pathinfo($image_url)['extension']);
-      $image_name = $this->_author.".".$this->_id.".".$image_extension;
-      echo "Start to save Image: ", $image_name ,"\n";
-      echo "new image name: ", $new_image_name , "\n";
 
-      echo "Download Images:download"."\n";
-      // URL から画像をダウンロードする
-      $image_data = file_get_contents($image_url."?name=orig");
-      file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_name, $image_data);
-      if(!$result)
-        echo "Photo Saved: ".$image_name."\n";
-      else
-        echo "Save Failed: ".$image_name."\n";
-      /**/
+      if( count($json_array['includes']['media']) >= 2 )
+      {
+          $image_i = 1;
+          foreach($image_url = $json_array['includes']['media'] as $photo_i )
+          {
+              $image_url = $photo_i['url'];
+              $image_extension = strtolower( pathinfo($image_url)['extension']);
+              $image_name = $this->_author.".".$this->_id.".".$image_i.".".$image_extension;
+              echo "Start to save Image: ", $image_name ,"\n";
+
+              echo "Download Images:download"."\n";
+              // URL から画像をダウンロードする
+              $image_data = file_get_contents($image_url."?name=orig");
+              file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_name, $image_data);
+              if(!$result)
+                echo "Photo Saved: ".$image_name."\n";
+              else
+                echo "Save Failed: ".$image_name."\n";
+              $image_i++;
+          }
+      }
+      else {
+        $image_url = $json_array['includes']['media']['0']['url'];
+        $image_extension = strtolower( pathinfo($image_url)['extension']);
+        $image_name = $this->_author.".".$this->_id.".".$image_extension;
+        echo "Start to save Image: ", $image_name ,"\n";
+
+        echo "Download Images:download"."\n";
+        // URL から画像をダウンロードする
+        $image_data = file_get_contents($image_url."?name=orig");
+        file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_name, $image_data);
+        if(!$result)
+          echo "Photo Saved: ".$image_name."\n";
+        else
+          echo "Save Failed: ".$image_name."\n";
+      }
     }
 
     function PrintApiResult($array)
