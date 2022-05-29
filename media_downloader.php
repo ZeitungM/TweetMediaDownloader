@@ -63,48 +63,41 @@
       echo "author: ".$this->_author."\n";
     }
 
+    // URL にある画像を、与えられたファイル名に拡張子をつけて保存する
+    function Download1Photo( $image_url, $image_stem_name)
+    {
+      $image_extension = strtolower( pathinfo($image_url)['extension']);
+      $image_complete_name = $image_stem_name.".".$image_extension;
+      echo "Start to save Image: ", $image_complete_name ,"\n";
+
+      echo "Download Images:download"."\n";
+      // URL から画像をダウンロードする
+      $image_data = file_get_contents($image_url."?name=orig");
+      // TODO: getenv のところ分けられるんじゃない？
+      file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_complete_name, $image_data);
+      if(!$result)
+        echo "Photo Saved: ".$image_complete_name."\n";
+      else
+        echo "Save Failed: ".$image_complete_name."\n";
+    }
+
     function DownloadPhoto($json_array)
     {
       // 画像の URL と拡張子を取得し、画像のファイル名を作る
       // 画像が複数添付されている場合、['includes']['media'][N]['url'] のNをループすればOK
-      
+
       if( count($json_array['includes']['media']) >= 2 )
       {
           $image_i = 1;
           foreach($image_url = $json_array['includes']['media'] as $photo_i )
           {
-              // TODO: ここをわけたい
-              $image_url = $photo_i['url'];
-              $image_extension = strtolower( pathinfo($image_url)['extension']);
-              $image_name = $this->_author.".".$this->_id.".".$image_i.".".$image_extension;
-              echo "Start to save Image: ", $image_name ,"\n";
+              $this->Download1Photo( $photo_i['url'], $this->_author.".".$this->_id.".".$image_i);
 
-              echo "Download Images:download"."\n";
-              // URL から画像をダウンロードする
-              $image_data = file_get_contents($image_url."?name=orig");
-              file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_name, $image_data);
-              if(!$result)
-                echo "Photo Saved: ".$image_name."\n";
-              else
-                echo "Save Failed: ".$image_name."\n";
               $image_i++;
           }
       }
-      else {
-        $image_url = $json_array['includes']['media']['0']['url'];
-        $image_extension = strtolower( pathinfo($image_url)['extension']);
-        $image_name = $this->_author.".".$this->_id.".".$image_extension;
-        echo "Start to save Image: ", $image_name ,"\n";
-
-        echo "Download Images:download"."\n";
-        // URL から画像をダウンロードする
-        $image_data = file_get_contents($image_url."?name=orig");
-        file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_name, $image_data);
-        if(!$result)
-          echo "Photo Saved: ".$image_name."\n";
-        else
-          echo "Save Failed: ".$image_name."\n";
-      }
+      else // 画像が1枚しかない場合
+        $this->Download1Photo( $json_array['includes']['media']['0']['url'], $this->_author.".".$this->_id);
     }
 
     function DownloadMedia()
@@ -131,6 +124,8 @@
       elseif( $json_array['includes']['media']['0']['type']=="photo" )
       {
           $this->DownloadPhoto($json_array);
+
+          // TODO : 画像の選択が行われていたときの処理はここに書く
       }
       else {
         echo "this tweet contains unknown type media\n";
