@@ -35,7 +35,6 @@
       //https://twitter.com/mt_fujimaru/status/1352192965704204291?s=19
       //https://twitter.com/warecommon/status/1354746039492878336
       //https://twitter.com/i/web/status/1354498563091390464
-
       preg_match('/(?<=\/status\/)\d+/', $line, $match);
       $this->_id = utf8_encode($match[0]);
     }
@@ -64,28 +63,17 @@
       echo "author: ".$this->_author."\n";
     }
 
-    function DownloadImage()
+    function DownloadPhoto($json_array)
     {
-      // curl に URL を設定する
-      $tweet_id = str_replace( PHP_EOL, '', $this->_id );
-      //$_query_media_fields = '&expansions=attachments.media_keys&media.fields=url';
-      $get_image_url = self::$_endpoint_get2tweet.self::$_query_tweet_id.$this->_id.self::$_queryname_expansions.self::$_querytype_attachments_media_keys.'&'.self::$_queryname_media_fields.self::$_querytype_url;
-      curl_setopt( self::$_curl, CURLOPT_URL, $get_image_url);
-
-      // curl を実行し、 JSON 形式に変換
-      $curl_result = curl_exec(self::$_curl);
-      $curl_result_utf8 = utf8_encode($curl_result);
-      $json_array = json_decode( $curl_result_utf8, true );
-      //$this->PrintApiResult($json_array);
-
       // 画像の URL と拡張子を取得し、画像のファイル名を作る
       // 画像が複数添付されている場合、['includes']['media'][N]['url'] のNをループすればOK
-
+      
       if( count($json_array['includes']['media']) >= 2 )
       {
           $image_i = 1;
           foreach($image_url = $json_array['includes']['media'] as $photo_i )
           {
+              // TODO: ここをわけたい
               $image_url = $photo_i['url'];
               $image_extension = strtolower( pathinfo($image_url)['extension']);
               $image_name = $this->_author.".".$this->_id.".".$image_i.".".$image_extension;
@@ -117,6 +105,38 @@
         else
           echo "Save Failed: ".$image_name."\n";
       }
+    }
+
+    function DownloadMedia()
+    {
+      // ツイートのメディア情報の取得
+      // curl に URL を設定する
+      $tweet_id = str_replace( PHP_EOL, '', $this->_id );
+      //$_query_media_fields = '&expansions=attachments.media_keys&media.fields=url';
+      $get_image_url = self::$_endpoint_get2tweet.self::$_query_tweet_id.$this->_id.self::$_queryname_expansions.self::$_querytype_attachments_media_keys.'&'.self::$_queryname_media_fields.self::$_querytype_url;
+      curl_setopt( self::$_curl, CURLOPT_URL, $get_image_url);
+
+      // curl を実行し、 JSON 形式に変換
+      $curl_result = curl_exec(self::$_curl);
+      $curl_result_utf8 = utf8_encode($curl_result);
+      $json_array = json_decode( $curl_result_utf8, true );
+      //$this->PrintApiResult($json_array);
+
+      // メディアタイプによる分岐
+      if( $json_array['includes']['media']['0']['type']=="video" )
+      {
+        echo "this tweet contains a video\n";
+        return ;
+      }
+      elseif( $json_array['includes']['media']['0']['type']=="photo" )
+      {
+          $this->DownloadPhoto($json_array);
+      }
+      else {
+        echo "this tweet contains unknown type media\n";
+        return ;
+      }
+
     }
 
     function PrintApiResult($array)
@@ -289,7 +309,7 @@
         $i++;
         // これから処理する URL を "読み込んだURLの番号: URL" の形式で表示
         echo $i, ": ", str_replace( array("\r\n", "\r", "\n"), '', $tweet_url), "\n";
-        $tweet->DownloadImage();
+        $tweet->DownloadMedia();
 
         //DownloadImageFromTweetId( $tweet_id, $screen_name, $selected_images, $curl);
     }
