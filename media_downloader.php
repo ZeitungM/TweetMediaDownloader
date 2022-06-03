@@ -87,7 +87,6 @@
     {
       // 画像の URL と拡張子を取得し、画像のファイル名を作る
       // 画像が複数添付されている場合、['includes']['media'][N]['url'] のNをループすればOK
-
       if( count($json_array['includes']['media']) >= 2 )
       {
           $image_i = 0;
@@ -96,7 +95,7 @@
           foreach($image_url = $json_array['includes']['media'] as $photo_i )
           {
               $image_i ++;
-              if( $image_i != $this->_selected_images[$selected_image_i] )
+              if( !empty($this->_selected_images[$selected_image_i])&&($image_i != $this->_selected_images[$selected_image_i]) )
                 continue;
 
               $this->Download1Photo( $photo_i['url'], $this->_author.".".$this->_id.".".$image_i);
@@ -107,6 +106,8 @@
       else // 画像が1枚しかない場合
         $this->Download1Photo( $json_array['includes']['media']['0']['url'], $this->_author.".".$this->_id);
     }
+
+
 
     function DownloadMedia()
     {
@@ -131,9 +132,9 @@
       }
       elseif( $json_array['includes']['media']['0']['type']=="photo" )
       {
-          $this->DownloadPhoto($json_array);
-
-          // TODO : 画像の選択が行われていたときの処理はここに書く
+        //$this->PrintApiResult($json_array);
+        $this->DownloadPhoto($json_array);
+        return ;
       }
       else {
         echo "this tweet contains unknown type media\n";
