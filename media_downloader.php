@@ -18,7 +18,7 @@
 
     public $_id;
     public $_author;
-    public $_selected_images;
+    public $_selected_images = [];
 
     function __construct()
     {
@@ -42,7 +42,9 @@
     function GetSelectedImagesByRegEx($line)
     {
       preg_match_all('/(?<=,)\d+/', $line, $match);
-      $this->_selected_images = array_map( 'utf8_encode', $match[0]);
+      $selected_images_str = array_map( 'utf8_encode', $match[0]);
+      $this->_selected_images = array_map( 'intval', $selected_images_str);
+      //var_dump($this->_selected_images);
     }
 
     function GetUsernameByAPI()
@@ -88,12 +90,18 @@
 
       if( count($json_array['includes']['media']) >= 2 )
       {
-          $image_i = 1;
+          $image_i = 0;
+          $selected_image_i = 0;
+          // TODO: ここをもうちょっとスマートに書きたい
           foreach($image_url = $json_array['includes']['media'] as $photo_i )
           {
+              $image_i ++;
+              if( $image_i != $this->_selected_images[$selected_image_i] )
+                continue;
+
               $this->Download1Photo( $photo_i['url'], $this->_author.".".$this->_id.".".$image_i);
 
-              $image_i++;
+              $selected_image_i ++;
           }
       }
       else // 画像が1枚しかない場合
@@ -247,8 +255,7 @@
         $tweet->GetUsernameByAPI();
 
         // URL から選択された画像の番号を取得
-        //preg_match_all('/(?<=,)\d+/', $tweet_url, $match);
-        //$selected_images = array_map( 'utf8_encode', $match[0]);
+        $tweet->GetSelectedImagesByRegEx($tweet_url);
 
         $i++;
         // これから処理する URL を "読み込んだURLの番号: URL" の形式で表示
