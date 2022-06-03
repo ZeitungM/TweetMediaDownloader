@@ -157,18 +157,6 @@
 
         var_dump($curl_result);
 
-        //test: ユーザ情報を取得する
-        /*
-        echo "user info\n";
-        $tweet_url = 'https://api.twitter.com/2/tweets/'.$tweet_id.'&expansions=author_id&tweet.fields=created_at&user.fields=username,verified';
-        curl_setopt( $curl, CURLOPT_URL, $tweet_url);
-        $curl_result = curl_exec($curl);
-        $curl_result_utf8 = utf8_encode($curl_result);
-        $json_array = json_decode( $curl_result_utf8, true );
-
-        var_dump($curl_result);*/
-
-
         if(isset($json_array['errors']))
         {
             echo "Error(".$json_array['errors'][0]['code'].") ".$json_array['errors'][0]['message']."\n";
@@ -186,45 +174,6 @@
         //if($json_array['extended_entities']['media']['0']['type']==='photo')
         if($json_array['includes']['media']['0']['type']==='photo')
         {
-            $i = 1;
-            if( count($json_array['includes']['media']) >= 2 )
-            {
-              foreach($image_url = $json_array['includes']['media'] as $photo_i )
-              {
-                  if( empty($selected_images) || in_array( $i, $selected_images ) )
-                  {
-                    // 画像の URL と拡張子を取得し、画像のファイル名を作る
-                    $image_url = $photo_i['media_url_https'];
-                    $image_extension = strtolower( pathinfo($image_url)['extension']);
-                    $image_name = $json_array['user']['screen_name'].".".$json_array['id'].".".$i.".".$image_extension;
-                    echo "Start to save Image: ", $image_name ,"\n";
-
-                    $image_data = file_get_contents($image_url."?name=orig");
-                    $result = file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_name, $image_data);
-                    if(!$result)
-                      echo "Photo Saved: ".$image_name."\n";
-                    else
-                      echo "Save Failed: ".$image_name."\n";
-                  }
-
-                  $i++;
-              }
-            }
-            else
-            {
-              // 画像の URL と拡張子を取得し、画像のファイル名を作る
-              $image_url = $json_array['includes']['media']['0']['url'];
-              $image_extension = strtolower( pathinfo($image_url)['extension']);
-              $image_name = $screen_name.".".$tweet_id.".".$image_extension;
-              echo "Start to save Image: ", $image_name ,"\n";
-
-              $image_data = file_get_contents($image_url."?name=orig");
-              file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_name, $image_data);
-              if(!$result)
-                echo "Photo Saved: ".$image_name."\n";
-              else
-                echo "Save Failed: ".$image_name."\n";
-            }
 
         }
         // 添付メディアが動画の場合
@@ -309,6 +258,6 @@
         //DownloadImageFromTweetId( $tweet_id, $screen_name, $selected_images, $curl);
     }
 
-    //curl_close($_curl); // todo: static 化した curl の curl_close をどうするか
+    //curl_close($_curl); // TODO: static 化した curl の curl_close をどうするか
     fclose($file_handle);
 ?>
