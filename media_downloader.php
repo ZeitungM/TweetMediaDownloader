@@ -109,6 +109,47 @@
 
     function DownloadVideo($json_array)
     {
+      // 2022/06/04 現在、動画は API2 では URL を取れない
+      $tweet_url = 'https://api.twitter.com/1.1/statuses/show.json?id='.$this->_id;
+      curl_setopt( self::$_curl, CURLOPT_URL, $tweet_url);
+
+      // curl を実行し、 JSON 形式に変換
+      $curl_result = curl_exec(self::$_curl);
+      $curl_result_utf8 = utf8_encode($curl_result);
+      $json_array = json_decode( $curl_result_utf8, true );
+
+      //$this->PrintApiResult($json_array);
+
+      $mp4_bitrate = 0;
+      $index = 0;
+      $i = 0;
+
+      // ビットレートが最大のファイルを探す
+      foreach( $json_array['extended_entities']['media']['0']['video_info']['variants'] as $movie_media_i )
+      {
+
+        if($movie_media_i['content_type']==="video/mp4" && $movie_media_i['bitrate'] > $mp4_bitrate)
+        {
+          $mp4_bitrate = $movie_media_i['bitrate'];
+          $index = $i;
+        }
+
+        $i++;
+      }
+
+      $movie_url = $json_array['extended_entities']['media']['0']['video_info']['variants'][$index]['url'];
+      $movie_info = pathinfo($movie_url);
+      $movie_extension = "mp4";
+      $movie_name = $json_array['user']['screen_name'].".".$json_array['id'].".".$movie_extension;
+      echo "Start to save Movie: ", $movie_name ,"\n";
+
+      $movie_data = file_get_contents($movie_url);
+      file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$movie_name, $movie_data);
+      if(!$result)
+        echo "Movie Saved: ".$movie_name."\n";
+      else
+        echo "Save Failed: ".$movie_name."\n";
+
       /*
       $video_extension = strtolower( pathinfo($image_url)['extension']);
       $video_complete_name = $image_stem_name.".".$video_extension;
@@ -165,7 +206,7 @@
       if( $json_array['includes']['media']['0']['type']=="video" )
       {
         echo "this tweet contains a video\n";
-        //$this->DownloadVideo($json_array);
+        $this->DownloadVideo($json_array);
         return ;
       }
       elseif( $json_array['includes']['media']['0']['type']=="photo" )
