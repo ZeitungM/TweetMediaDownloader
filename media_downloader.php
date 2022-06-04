@@ -107,7 +107,37 @@
         $this->Download1Photo( $json_array['includes']['media']['0']['url'], $this->_author.".".$this->_id);
     }
 
+    function DownloadVideo($json_array)
+    {
+      /*
+      $video_extension = strtolower( pathinfo($image_url)['extension']);
+      $video_complete_name = $image_stem_name.".".$video_extension;
+      echo "Start to save Image: ", $image_complete_name ,"\n";
 
+      echo "Download Images:download"."\n";
+      // URL から画像をダウンロードする
+      $image_data = file_get_contents($image_url."?name=orig");
+      // TODO: getenv のところ分けられるんじゃない？
+      file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_complete_name, $image_data);
+      */
+
+      // ビットレートが最大のファイルを探す
+
+      /*
+      $movie_url = $json_array['extended_entities']['media']['0']['video_info']['variants'][$index]['url'];
+      $movie_info = pathinfo($movie_url);
+      $movie_extension = "mp4";
+      $movie_name = $json_array['user']['screen_name'].".".$json_array['id'].".".$movie_extension;
+      echo "Start to save Movie: ", $movie_name ,"\n";
+
+      $movie_data = file_get_contents($movie_url);
+      file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$movie_name, $movie_data);
+      if(!$result)
+        echo "Movie Saved: ".$image_complete_name."\n";
+      else
+        echo "Save Failed: ".$image_complete_name."\n";
+        */
+    }
 
     function DownloadMedia()
     {
@@ -124,10 +154,18 @@
       $json_array = json_decode( $curl_result_utf8, true );
       //$this->PrintApiResult($json_array);
 
+      // エラーなら詳報を表示して終了
+      if( array_key_exists( 'errors', $json_array) )
+      {
+        echo "Error: ".$json_array['errors']['0']['detail']."\n";
+        return ;
+      }
+
       // メディアタイプによる分岐
       if( $json_array['includes']['media']['0']['type']=="video" )
       {
         echo "this tweet contains a video\n";
+        //$this->DownloadVideo($json_array);
         return ;
       }
       elseif( $json_array['includes']['media']['0']['type']=="photo" )
@@ -137,7 +175,7 @@
         return ;
       }
       else {
-        echo "this tweet contains unknown type media\n";
+        echo "this tweet contains unknown type media:(".$json_array['includes']['media']['0']['type'].")\n";
         return ;
       }
 
