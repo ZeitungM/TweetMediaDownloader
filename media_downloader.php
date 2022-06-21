@@ -32,9 +32,9 @@
     function GetTweetIdByRegEx($line)
     {
       // ツイートのURLは以下の形式で与えられるので、 /status/ から最後までか、 ?までを抜き出す
-      //https://twitter.com/mt_fujimaru/status/1352192965704204291?s=19
-      //https://twitter.com/warecommon/status/1354746039492878336
-      //https://twitter.com/i/web/status/1354498563091390464
+      //https://twitter.com/fox_possession/status/1281219991044386816?s=19　（画像1枚)
+      //https://twitter.com/fox_possession/status/1407707096443883527 (画像4枚)
+      //https://twitter.com/i/status/1448638849874202628 (動画)
       preg_match('/(?<=\/status\/)\d+/', $line, $match);
       $this->_id = utf8_encode($match[0]);
     }
@@ -87,21 +87,18 @@
     {
       // 画像の URL と拡張子を取得し、画像のファイル名を作る
       // 画像が複数添付されている場合、['includes']['media'][N]['url'] のNをループすればOK
+
       if( count($json_array['includes']['media']) >= 2 )
       {
           $image_i = 0;
           $selected_image_i = 0;
-          // TODO: ここをもうちょっとスマートに書きたい
-          foreach($image_url = $json_array['includes']['media'] as $photo_i )
+
+          foreach($this->_selected_images as $image_i)
           {
-              $image_i ++;
-              if( !empty($this->_selected_images[$selected_image_i])&&($image_i != $this->_selected_images[$selected_image_i]) )
-                continue;
-
-              $this->Download1Photo( $photo_i['url'], $this->_author.".".$this->_id.".".$image_i);
-
-              $selected_image_i ++;
+            //  $this->_selected_images[] にある番号の画像をダウンロード
+              $this->Download1Photo( $json_array['includes']['media'][$image_i - 1]['url'], $this->_author.".".$this->_id.".".$image_i);
           }
+
       }
       else // 画像が1枚しかない場合
         $this->Download1Photo( $json_array['includes']['media']['0']['url'], $this->_author.".".$this->_id);
@@ -149,35 +146,6 @@
         echo "Movie Saved: ".$movie_name."\n";
       else
         echo "Save Failed: ".$movie_name."\n";
-
-      /*
-      $video_extension = strtolower( pathinfo($image_url)['extension']);
-      $video_complete_name = $image_stem_name.".".$video_extension;
-      echo "Start to save Image: ", $image_complete_name ,"\n";
-
-      echo "Download Images:download"."\n";
-      // URL から画像をダウンロードする
-      $image_data = file_get_contents($image_url."?name=orig");
-      // TODO: getenv のところ分けられるんじゃない？
-      file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$image_complete_name, $image_data);
-      */
-
-      // ビットレートが最大のファイルを探す
-
-      /*
-      $movie_url = $json_array['extended_entities']['media']['0']['video_info']['variants'][$index]['url'];
-      $movie_info = pathinfo($movie_url);
-      $movie_extension = "mp4";
-      $movie_name = $json_array['user']['screen_name'].".".$json_array['id'].".".$movie_extension;
-      echo "Start to save Movie: ", $movie_name ,"\n";
-
-      $movie_data = file_get_contents($movie_url);
-      file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$movie_name, $movie_data);
-      if(!$result)
-        echo "Movie Saved: ".$image_complete_name."\n";
-      else
-        echo "Save Failed: ".$image_complete_name."\n";
-        */
     }
 
     function DownloadMedia()
@@ -227,87 +195,7 @@
       var_dump($array);
     }
 
-    //public function
   }
-
-    function DownloadImageFromTweetId( $tweet_id, $screen_name, $selected_images, $curl)
-    {
-        // curl に URL を設定する
-        $tweet_id = str_replace( PHP_EOL, '', $tweet_id );
-        //$tweet_url = 'https://api.twitter.com/1.1/statuses/show.json?id='.$tweet_id;
-        $tweet_url = 'https://api.twitter.com/2/tweets/'.$tweet_id.'?expansions=attachments.media_keys&media.fields=url';
-        curl_setopt( $curl, CURLOPT_URL, $tweet_url);
-
-        // curl を実行し、 JSON 形式に変換
-        $curl_result = curl_exec($curl);
-        $curl_result_utf8 = utf8_encode($curl_result);
-        $json_array = json_decode( $curl_result_utf8, true );
-
-        var_dump($curl_result);
-
-        if(isset($json_array['errors']))
-        {
-            echo "Error(".$json_array['errors'][0]['code'].") ".$json_array['errors'][0]['message']."\n";
-            echo "\n";
-            return;
-        }
-
-        //if(!isset($json_array['extended_entities']['media']))
-        if(!isset($json_array['includes']['media']))
-        {
-            echo "Unsupported JSON Type. json['extended_entities']['media'] is not exist.\n";
-        }
-
-        // 添付メディアが画像の場合
-        //if($json_array['extended_entities']['media']['0']['type']==='photo')
-        if($json_array['includes']['media']['0']['type']==='photo')
-        {
-
-        }
-        // 添付メディアが動画の場合
-        elseif($json_array['extended_entities']['media']['0']['type']==='video')
-        {
-            $mp4_bitrate = 0;
-            $index = 0;
-            $i = 0;
-            // ビットレートが最大のファイルを探す
-            foreach( $json_array['extended_entities']['media']['0']['video_info']['variants'] as $movie_media_i )
-            {
-
-              if($movie_media_i['content_type']==="video/mp4" && $movie_media_i['bitrate'] > $mp4_bitrate)
-              {
-                $mp4_bitrate = $movie_media_i['bitrate'];
-                $index = $i;
-              }
-
-              $i++;
-            }
-
-            $movie_url = $json_array['extended_entities']['media']['0']['video_info']['variants'][$index]['url'];
-            $movie_info = pathinfo($movie_url);
-            $movie_extension = "mp4";
-            $movie_name = $json_array['user']['screen_name'].".".$json_array['id'].".".$movie_extension;
-            echo "Start to save Movie: ", $movie_name ,"\n";
-
-            $movie_data = file_get_contents($movie_url);
-            file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$movie_name, $movie_data);
-            echo "Movie Saved: ".$movie_name."\n";
-        }
-        // gif アニメのとき
-        elseif($json_array['extended_entities']['media']['0']['type']==='animated_gif')
-        {
-            $movie_url = $json_array['extended_entities']['media']['0']['video_info']['variants'][0]['url'];
-            $movie_info = pathinfo($movie_url);
-            $movie_extension = "mp4";
-            $movie_name = $json_array['user']['screen_name'].".".$json_array['id'].".".$movie_extension;
-            echo "Start to save animated gif: ", $movie_name ,"\n";
-
-            $movie_data = file_get_contents($movie_url);
-            file_put_contents( getenv('TWITTER_DOWNLOAD_DIRECTORY').$movie_name, $movie_data);
-            echo "Movie Saved: ".$movie_name."\n";
-        }
-        echo "\n";
-    }
 
     // ここから
     // URL.txt から一行ずつ読み込み
@@ -342,7 +230,6 @@
         echo $i, ": ", str_replace( array("\r\n", "\r", "\n"), '', $tweet_url), "\n";
         $tweet->DownloadMedia();
 
-        //DownloadImageFromTweetId( $tweet_id, $screen_name, $selected_images, $curl);
     }
 
     //curl_close($_curl); // TODO: static 化した curl の curl_close をどうするか
